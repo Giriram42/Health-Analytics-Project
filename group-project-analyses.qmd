@@ -1,0 +1,612 @@
+---
+title:       "Group Project Analyses"
+author:
+  - name:         "Giri Chandragiri"
+    affiliation:  "Group H"
+format:
+  html:
+    toc:          true
+    toc-location: "left"
+source:    visual
+df-print:  paged
+execute:
+  warning: false
+  message: false
+  echo:    false
+---
+
+```{r}
+#| label: library-calls
+#| echo: false
+#| warning: false
+#| message: false
+
+library(tidyverse)
+library(tidymodels)
+library(gt)
+library(gtsummary)
+library(easystats)
+library(ggpubr)
+library(readxl)
+library(yardstick)
+```
+
+## Publication-Ready Figures
+
+```{r}
+#| label: tbl-dataset-one
+#| tbl-cap: "Mental health depression based on year"
+
+data_one_import <- read_csv(
+  file = "Mental health Depression disorder Data 2.csv"
+)
+
+data_one_import
+
+data_one_tidy <-
+  data_one_import |>
+  rename(
+    "country" = "Entity",
+    "depression_disorder"  = "Depression (%)",
+    "year" = "Year"
+    ) |>
+  select(
+    country,
+    year,
+    depression_disorder
+  ) |>
+  drop_na() |>
+  mutate(
+    country = as_factor(country),           
+    year    = fct_inseq(as_factor(year))
+  )
+
+data_one_tidy
+
+```
+
+### Univariate Analyses
+
+```{r}
+#| label: fig-desity-plot
+#| fig-cap: "Density plot for depression disorder"
+
+depression_density_plot <- 
+  data_one_tidy |>
+  rename(
+    Year = year
+  ) |>
+  filter(
+    Year %in% c("1990", "2000", "2010")
+  ) |>
+  ggplot(
+    mapping = aes(
+      x     = depression_disorder
+    )
+  ) + geom_density(
+    alpha  = 0.5,
+    fill   = "skyblue"
+  ) +
+  labs(
+    x = "Depression disorder",
+    y = "Frequency"
+  ) +
+  theme_classic()
+
+depression_density_plot
+
+```
+
+### Bivariate Analyses
+
+```{r}
+#| label: fig-box-plot
+#| fig-cap: "Depression disorder rate by country"
+
+depression_box_plot <- 
+  data_one_tidy |>
+  filter(
+    country %in% c(
+      "Sweden",
+      "United States",
+      "Turkey"
+    ),
+    year %in% "1990":"2010"
+  ) |>
+  ggplot(
+    mapping = aes(
+      x = country,
+      y = depression_disorder
+    )
+  ) +
+  geom_boxplot(
+    color     = "skyblue",
+    fill      = "pink",
+    linewidth = 1
+  ) +
+  scale_y_continuous(                         
+    labels = scales::label_number(            
+      scale_cut = scales::cut_short_scale()
+    )
+  ) +
+  labs(
+    x    = "Country",
+    y    = "Depression Disorder by country"
+  ) +
+  theme_classic()
+  theme(
+    legend.position      = "top",
+    legend.justification = c(0, 0)
+  )
+  
+depression_box_plot
+
+```
+
+### Multivariate Analyses
+
+```{r}
+#| label: fig-multi-plot
+#| fig-cap: "Depression disorder based on year and country"
+
+data_one_tidy |>
+  filter(
+    country %in% c(
+      "Sweden",
+      "United States",
+      "Honduras"
+    ),
+    year %in% "1995":"2000"
+  ) |>
+  ggplot(
+    mapping = aes(
+      x    = year,
+      y    = depression_disorder,
+      fill = country
+      )
+    ) +
+  geom_col(
+    position = "dodge",
+    width    = 0.7
+    ) +  
+  labs(
+    x     = "Year", 
+    y     = "Depression disorder rate", 
+    fill  = "Country", 
+    title = "Multivariate Analysis:Mental depression disorder by year and country") +
+    theme_classic()
+
+```
+
+## Publication-Ready Tables
+
+
+
+```{r}
+#| label: tbl-dataset-two
+#| tbl-cap: "Table Summary of survey dataset"
+
+data_two_import <- read_csv(
+  file = "survey.csv"
+)
+
+data_two_import
+
+data_two_tidy <-
+  data_two_import |>
+  rename(
+    "gender"  = "Gender",
+    "country" = "Country",
+    "obs"     = "obs_consequence",
+    "age"     = "Age"
+  ) |>
+  select(
+    gender,
+    family_history,
+    treatment,
+    obs,
+    age
+    
+  ) |>
+  drop_na() |>
+  mutate(
+    family_history = case_when(
+      family_history == "Yes" ~ "yes",
+      family_history == "No" ~ "no"
+    ) 
+    ) |>
+  mutate(
+    gender = case_when(
+      gender == "Male" ~ "male",
+      gender == "Female" ~ "female",
+      gender == "M" ~ "male",
+      gender == "m" ~ "male",
+      gender == "Mal" ~ "male",
+      gender == "Woman" ~ "female",
+      gender == "F" ~ "female",
+      gender == "f" ~ "female",
+      gender == "male" ~ "male",
+      gender == "female" ~ "female"
+    )
+  ) |>
+  mutate(
+    treatment = case_when(
+      treatment == "Yes" ~ "yes",
+      treatment == "No" ~ "no"
+    ) 
+    ) |>
+  mutate(
+    obs = case_when(
+      obs == "Yes" ~ "yes",
+      obs == "No" ~ "no"
+    )
+  )
+  
+
+data_two_tidy
+
+```
+
+```{r}
+#| label: tbl-dataset-two-prepared
+#| tbl-cap: "Prepared Dataset two"
+
+data_two_prepared <-
+  data_two_tidy |>
+  mutate(
+    gender = case_when(
+      gender == "male" ~ "Male",
+      gender == "female" ~ "Female"
+    ),
+    gender = fct(
+      x      = gender,
+      levels = c("Male", "Female")
+    ),
+    family_history = case_when(
+      family_history == "yes" ~ "Yes",
+      family_history == "no" ~ "No"
+    ),
+    family_history = fct(
+      x      = family_history,
+      levels = c("Yes", "No")
+    ),
+    treatment = case_when(
+      treatment == "yes" ~ "Yes",
+      treatment == "no" ~ "No"
+    ),
+    treatment = fct(
+      x        = treatment,
+      levels   = c("Yes", "No")
+    )
+  ) |>
+  rename(
+    "Gender"            = "gender",     
+    "Family history"    = "family_history",
+    "Treatment"         = "treatment"
+  )
+
+data_two_prepared
+```
+
+### Contingency Table
+
+#### Primary Analysis
+
+The explanatory variable in @tbl-contingency-two-by-two In this analysis, the variable "Sex" denotes gender categories encompassing "Male" and "Female," while the response variable "Family history of Depression disorder" signifies whether individuals possess a familial predisposition to depression disease, delineated as "Yes" or "No." The research inquiry centers on examining the relationship between gender and familial history of depression disorder, thereby constructing a 2x2 contingency table to elucidate potential associations.
+
+```{r}
+#| label: tbl-contingency-two-by-two
+#| tbl-cap: "Table Showing the relationship between Gender and Family history of Depression Disorder"
+
+attr(data_two_prepared$Gender, "label") <- "Gender"
+attr(data_two_prepared$`Family history`, "label") <- "Family History of Depression Disorder"
+
+data_two_contingency <-
+  data_two_prepared |>
+  tbl_cross(
+    row = Gender,
+    col = `Family history`,
+    label = list(
+      Gender ~ "Gender",
+      `Family history` ~ "Family History of Depression Disorder"
+    )
+  ) |>
+  bold_labels()
+
+data_two_contingency
+
+```
+
+
+#### Secondary Analysis
+
+```{r}
+#| label: bivariate-statistics
+#| echo: false
+
+bivariate_data <-
+  data_two_tidy |>
+  mutate(
+    gender = case_when(
+      gender == "male" ~ "Yes",
+      gender == "female" ~ "No"
+    ),
+    gender = fct(
+      x      = gender,
+      levels = c("Yes", "No")
+    ),
+    family_history = case_when(
+      family_history == "yes" ~ "Yes",
+      family_history == "no" ~ "No"
+    ),
+    family_history = fct(
+      x      = family_history,
+      levels = c("Yes", "No")
+    )
+  )
+
+
+mcc <- mcc_vec(
+  truth    = bivariate_data$gender,
+  estimate = bivariate_data$family_history 
+) |>
+  round(digits = 2)
+
+mcc
+```
+The Matthews Correlation Coefficient (MCC) serves as a statistical metric employed for evaluating the efficacy of binary classifications. Within this analysis, the MCC value derived for assessing the association between gender and familial history of depression disorder is recorded at -0.15.
+
+### Summary Table A
+
+#### Primary Analysis
+
+```{r}
+#| label: tbl-dataset-two-prepared-summary-tableA
+#| tbl-cap: "Prepared Dataset two table A"
+
+data_two_summaryA <-
+  data_two_tidy |>
+  select(
+    gender,
+    treatment
+  ) |>
+  mutate(
+    gender = case_when(
+      gender == "male" ~ "Male",
+      gender == "female" ~ "Female"
+    ),
+    gender = factor(
+      x      = gender,
+      levels = c("Male", "Female")
+    ),
+    treatment = case_when(
+      treatment == "yes" ~ "Treated",
+      treatment == "no" ~ "Not Treated"
+    ),
+    treatment = factor(
+      x        = treatment,
+      levels   = c("Treated", "Not Treated")
+    )
+  ) |>
+  tbl_summary(
+    label = list(
+      gender    ~ "Gender",
+      treatment ~ "Treatment"
+      )
+    ) |>
+  bold_labels() |>
+  italicize_levels() |>
+  as_gt() |>
+  tab_header(
+    title    = md("**Treatment Analysis**"),
+    subtitle = "Based On Gender"
+  ) |>
+  tab_source_note(
+    source_note = md("Data from `survey` dataset.")
+    ) |>
+  opt_footnote_marks(
+    marks = "letters"
+    )
+  
+data_two_summaryA
+
+```
+
+#### Secondary Analysis
+
+```{r}
+data_two_summaryAplot <-
+  data_two_tidy |>
+  select(
+    gender,
+    treatment
+  ) |>
+  mutate(
+    gender = case_when(
+      gender == "male" ~ "Male",
+      gender == "female" ~ "Female"
+    ),
+    gender = factor(
+      x      = gender,
+      levels = c("Male", "Female")
+    ),
+    treatment = case_when(
+      treatment == "yes" ~ "Treated",
+      treatment == "no" ~ "Not Treated"
+    ),
+    treatment = factor(
+      x        = treatment,
+      levels   = c("Treated", "Not Treated")
+    )
+  ) |>
+  ggplot(
+    aes(
+      x    = gender,
+      fill = treatment
+      )
+    ) +
+  geom_bar(
+    position = "dodge"
+    ) +
+  scale_fill_manual(
+    values = c(
+      "Treated"     = "green4",
+      "Not Treated" = "red"
+      )
+    ) +
+  labs(
+    x = "Gender", 
+    y = ""
+    ) +
+  theme_classic() + 
+  coord_flip()
+
+data_two_summaryAplot
+
+```
+
+
+### Summary Table B
+
+#### Primary Analysis
+
+```{r}
+summaryB_clean <-
+  drop_na(data_two_tidy)
+
+summaryB_prepared <-
+  summaryB_clean |>
+  mutate(
+    gender = case_when(
+      gender == "male" ~ "Male",
+      gender == "female" ~ "Female"
+      ),
+    treatment = case_when(
+      treatment == "yes" ~ "Treated",
+      treatment == "no" ~ "Not Treated"
+    ),
+    treatment = factor(
+      x        = treatment,
+      levels   = c("Treated", "Not Treated")
+    )
+  ) |>
+  select(
+    gender,
+    treatment,
+    age
+    )
+
+attr(summaryB_prepared$gender, "label") <- "Gender"
+attr(summaryB_prepared$treatment, "label") <- "Treatment for Mental Disorder"
+attr(summaryB_prepared$age, "label") <- "Age of Mental Patient"
+
+summaryB_prepared <-
+  summaryB_prepared |>
+  group_by(gender,treatment) |>
+  summarize(
+    mean     = mean(age),
+    sd       = sd(age),
+    skewness = skewness(age)[[1]],
+    kurtosis = kurtosis(age)[[1]],
+    .groups  = "drop"
+    ) |>
+  gt(
+    groupname_col = "gender",
+    rowname_col   = "treatment"
+    ) |>
+  fmt_number(decimals = 2) |>
+  tab_style(
+    style = list(
+      cell_text(weight = "bold"),
+      cell_fill(color  = "#F2F2F2")
+      ),
+    location = cells_row_groups(groups = everything())
+    ) |>
+  cols_label(
+    mean     = md("**Mean**"),
+    sd       = md("**SD**"),
+    skewness = md("**&gamma;<sub>1</sub>**"),
+    kurtosis = md("**&gamma;<sub>2</sub>**")
+    ) |>
+  tab_stub_indent(
+    rows   = everything(),
+    indent = 2
+    )
+
+summaryB_prepared |>
+  tab_footnote(
+    footnote  = "arithmetic mean",
+    locations = cells_column_labels(
+    columns   = c(mean)
+    )
+    )|>
+  tab_footnote(
+    footnote  = "standard deviation",
+    locations = cells_column_labels(
+      columns = c(sd)
+      )
+    ) |>
+  tab_footnote(
+    footnote  = "skewness",
+    locations = cells_column_labels(
+    columns   = c(skewness)
+    )
+    ) |>
+  tab_footnote(
+    footnote  = "kurtosis",
+    locations = cells_column_labels(
+    columns   = c(kurtosis)
+    )
+    ) |>
+  opt_footnote_marks(marks = "letters") |>
+  tab_source_note(
+  source_note = md("Data from `survey` dataset.")
+  ) |>
+  tab_header (
+    title    = md("**Descriptive Statistics For Mental Health Treatment**"),
+    subtitle = md("Based on gender patients")
+    )
+
+```
+
+#### Secondary Analysis
+
+```{r}
+summaryB_clean |>
+  mutate(
+    gender = case_when(
+      gender == "male" ~ "Male",
+      gender == "female" ~ "Female"
+      ),
+    treatment = case_when(
+      treatment == "yes" ~ "Treated",
+      treatment == "no" ~ "Not Treated"
+      )
+    ) |>
+  ggplot(
+    mapping = aes(
+      x    = age,
+      fill = gender
+      )
+    ) +
+  geom_density(
+    color = "blue",
+    alpha = 0.5,
+    fill  = NA
+    ) + 
+  facet_grid(treatment ~ gender, scales = "free_y") + 
+  labs(
+    x     = "Age from mental patients", 
+    y     = "Density", 
+    title = "Density Curves of age by gender and mental treatment"
+    ) +
+  theme_classic()
+  
+```
+
+## References
+
+Open Sourcing Mental Illness. (2014). Mental Health in Tech Survey. Kaggle. Retrieved    from https://www.kaggle.com/datasets/osmi/mental-health-in-tech-survey.
+
+MT Kaggle Team. (n.d.). Mental Health [Data set]. Kaggle. https://www.kaggle.com/datasets/imtkaggleteam/mental-health
+
